@@ -2,15 +2,13 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-const db = new sqlite3.Database('./database.db');
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'database.db');
+const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   db.run(`
@@ -192,8 +190,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Database path: ${dbPath}`);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled error:', err);
 });
 
 module.exports = app;
