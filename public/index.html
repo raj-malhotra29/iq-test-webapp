@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IQ Test - Test Your Intelligence</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 50px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    h1 {
+      color: #fff;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 30px rgba(79, 172, 254, 0.5);
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1em;
+      margin-bottom: 40px;
+    }
+    .input-group {
+      margin-bottom: 25px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1.1em;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    input[type="text"]:focus {
+      border-color: #4facfe;
+      box-shadow: 0 0 20px rgba(79, 172, 254, 0.3);
+    }
+    input[type="text"]::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .btn {
+      padding: 15px 40px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: #1a1a2e;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error {
+      color: #ff6b6b;
+      margin-top: 15px;
+      font-size: 0.9em;
+    }
+    .nav-links {
+      margin-top: 30px;
+    }
+    .nav-links a {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 0.9em;
+      transition: color 0.3s ease;
+    }
+    .nav-links a:hover {
+      color: #4facfe;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>IQ Test</h1>
+    <p class="subtitle">Test your intelligence level</p>
+    
+    <div class="input-group">
+      <input type="text" id="nameInput" placeholder="Enter your name" maxlength="50">
+    </div>
+    
+    <button class="btn btn-primary" id="startBtn" onclick="startTest()">Start Test</button>
+    <p class="error" id="errorMsg"></p>
+    
+    <div class="nav-links">
+      <a href="#" onclick="showDashboard()">Dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    async function startTest() {
+      const name = document.getElementById('nameInput').value.trim();
+      const errorMsg = document.getElementById('errorMsg');
+      const startBtn = document.getElementById('startBtn');
+      
+      if (!name) {
+        errorMsg.textContent = 'Please enter your name';
+        return;
+      }
+
+      startBtn.disabled = true;
+      startBtn.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to register');
+        }
+
+        currentUser = data.user;
+        localStorage.setItem('iqtest_user', JSON.stringify(currentUser));
+        window.location.href = '/quiz.html';
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start Test';
+      }
+    }
+
+    function showDashboard() {
+      window.location.href = '/dashboard.html';
+    }
+
+    document.getElementById('nameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') startTest();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IQ Test - Questions</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .user-name {
+      color: #4facfe;
+      font-weight: 600;
+    }
+    .progress {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .question-container {
+      display: none;
+    }
+    .question-container.active {
+      display: block;
+    }
+    .question-text {
+      color: #fff;
+      font-size: 1.4em;
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .option {
+      padding: 18px 25px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: left;
+    }
+    .option:hover {
+      border-color: #4facfe;
+      background: rgba(79, 172, 254, 0.1);
+      transform: translateX(5px);
+    }
+    .option.selected {
+      border-color: #4facfe;
+      background: rgba(79, 172, 254, 0.2);
+    }
+    .result-container {
+      display: none;
+      text-align: center;
+    }
+    .result-container.active {
+      display: block;
+    }
+    .score-display {
+      font-size: 4em;
+      color: #4facfe;
+      margin: 20px 0;
+      text-shadow: 0 0 40px rgba(79, 172, 254, 0.5);
+    }
+    .score-label {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.3em;
+      margin-bottom: 10px;
+    }
+    .score-message {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.1em;
+      margin-bottom: 30px;
+    }
+    .btn {
+      padding: 15px 40px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      margin: 5px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: #1a1a2e;
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .nav-links {
+      margin-top: 30px;
+    }
+    .nav-links a {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 0.9em;
+    }
+    .nav-links a:hover {
+      color: #4facfe;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span>Welcome, <span class="user-name" id="userName"></span></span>
+      <span class="progress" id="progress">Question 1 of 10</span>
+    </div>
+
+    <div id="questionContainer"></div>
+
+    <div class="result-container" id="resultContainer">
+      <p class="score-label">Your Score</p>
+      <div class="score-display" id="scoreDisplay">0</div>
+      <p class="score-message" id="scoreMessage">Great job!</p>
+      <button class="btn btn-primary" onclick="retakeTest()">Retake Test</button>
+      <button class="btn btn-secondary" onclick="showDashboard()">View Dashboard</button>
+    </div>
+
+    <div class="nav-links">
+      <a href="/" onclick="goHome()">Home</a>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        question: "What is the next number in the sequence: 2, 4, 8, 16, ?",
+        options: ["24", "32", "28", "30"],
+        correct: 1
+      },
+      {
+        question: "If all roses are flowers and some flowers fade quickly, which statement is definitely true?",
+        options: ["Some roses fade quickly", "All roses fade quickly", "No roses fade quickly", "Cannot be determined"],
+        correct: 3
+      },
+      {
+        question: "What is 15% of 200?",
+        options: ["25", "30", "35", "40"],
+        correct: 1
+      },
+      {
+        question: "Complete the analogy: Book is to Reading as Fork is to...?",
+        options: ["Kitchen", "Eating", "Food", "Metal"],
+        correct: 1
+      },
+      {
+        question: "If the day before yesterday was Monday, what day is tomorrow?",
+        options: ["Wednesday", "Thursday", "Friday", "Saturday"],
+        correct: 1
+      },
+      {
+        question: "What comes next: A, C, E, G, ?",
+        options: ["H", "I", "J", "K"],
+        correct: 1
+      },
+      {
+        question: "If you have 3 apples and you eat 1, then give 1 away, how many do you have?",
+        options: ["0", "1", "2", "3"],
+        correct: 1
+      },
+      {
+        question: "Which word does not belong: Apple, Banana, Carrot, Grape?",
+        options: ["Apple", "Banana", "Carrot", "Grape"],
+        correct: 2
+      },
+      {
+        question: "If RED is coded as 18-5-4, how is BLUE coded?",
+        options: ["2-12-21-5", "12-21-5-4", "2-12-21-4", "12-21-5-5"],
+        correct: 1
+      },
+      {
+        question: "What is the square root of 144?",
+        options: ["10", "11", "12", "14"],
+        correct: 2
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let currentUser = null;
+
+    function init() {
+      const userData = localStorage.getItem('iqtest_user');
+      if (!userData) {
+        window.location.href = '/';
+        return;
+      }
+      currentUser = JSON.parse(userData);
+      document.getElementById('userName').textContent = currentUser.name;
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const container = document.getElementById('questionContainer');
+      const q = questions[currentQuestion];
+      
+      let html = `<div class="question-container active" data-q="${currentQuestion}">`;
+      html += `<p class="question-text">${q.question}</p>`;
+      html += `<div class="options">`;
+      
+      q.options.forEach((opt, i) => {
+        html += `<div class="option" onclick="selectOption(${i})">${opt}</div>`;
+      });
+      
+      html += `</div></div>`;
+      container.innerHTML = html;
+      
+      document.getElementById('progress').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+    }
+
+    function selectOption(index) {
+      const q = questions[currentQuestion];
+      if (index === q.correct) {
+        score++;
+      }
+      
+      document.querySelectorAll('.option')[index].classList.add('selected');
+      
+      setTimeout(() => {
+        currentQuestion++;
+        if (currentQuestion < questions.length) {
+          showQuestion();
+        } else {
+          showResult();
+        }
+      }, 500);
+    }
+
+    async function showResult() {
+      document.getElementById('questionContainer').innerHTML = '';
+      document.getElementById('resultContainer').classList.add('active');
+      document.getElementById('scoreDisplay').textContent = `${score}/${questions.length}`;
+      
+      const percentage = (score / questions.length) * 100;
+      let message = '';
+      if (percentage >= 90) message = 'Excellent! You are a genius!';
+      else if (percentage >= 70) message = 'Great job! Very intelligent!';
+      else if (percentage >= 50) message = 'Good work! Keep improving!';
+      else message = 'Practice makes perfect!';
+      
+      document.getElementById('scoreMessage').textContent = message;
+      document.getElementById('progress').textContent = 'Complete!';
+
+      try {
+        await fetch('/api/scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            score: score,
+            total_questions: questions.length
+          })
+        });
+      } catch (err) {
+        console.error('Failed to save score:', err);
+      }
+    }
+
+    function retakeTest() {
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById('resultContainer').classList.remove('active');
+      showQuestion();
+    }
+
+    function showDashboard() {
+      window.location.href = '/dashboard.html';
+    }
+
+    function goHome() {
+      window.location.href = '/';
+    }
+
+    init();
+  </script>
+</body>
+</html>
