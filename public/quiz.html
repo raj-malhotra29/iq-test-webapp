@@ -166,62 +166,21 @@
   </div>
 
   <script>
-    const questions = [
-      {
-        question: "What is the next number in the sequence: 2, 4, 8, 16, ?",
-        options: ["24", "32", "28", "30"],
-        correct: 1
-      },
-      {
-        question: "If all roses are flowers and some flowers fade quickly, which statement is definitely true?",
-        options: ["Some roses fade quickly", "All roses fade quickly", "No roses fade quickly", "Cannot be determined"],
-        correct: 3
-      },
-      {
-        question: "What is 15% of 200?",
-        options: ["25", "30", "35", "40"],
-        correct: 1
-      },
-      {
-        question: "Complete the analogy: Book is to Reading as Fork is to...?",
-        options: ["Kitchen", "Eating", "Food", "Metal"],
-        correct: 1
-      },
-      {
-        question: "If the day before yesterday was Monday, what day is tomorrow?",
-        options: ["Wednesday", "Thursday", "Friday", "Saturday"],
-        correct: 1
-      },
-      {
-        question: "What comes next: A, C, E, G, ?",
-        options: ["H", "I", "J", "K"],
-        correct: 1
-      },
-      {
-        question: "If you have 3 apples and you eat 1, then give 1 away, how many do you have?",
-        options: ["0", "1", "2", "3"],
-        correct: 1
-      },
-      {
-        question: "Which word does not belong: Apple, Banana, Carrot, Grape?",
-        options: ["Apple", "Banana", "Carrot", "Grape"],
-        correct: 2
-      },
-      {
-        question: "If RED is coded as 18-5-4, how is BLUE coded?",
-        options: ["2-12-21-5", "12-21-5-4", "2-12-21-4", "12-21-5-5"],
-        correct: 1
-      },
-      {
-        question: "What is the square root of 144?",
-        options: ["10", "11", "12", "14"],
-        correct: 2
-      }
-    ];
-
+    let questions = [];
     let currentQuestion = 0;
     let score = 0;
     let currentUser = null;
+
+    async function loadQuestions() {
+      const response = await fetch('/api/questions');
+      const data = await response.json();
+      questions = data.questions.map(q => ({
+        question: q.question,
+        options: [q.option1, q.option2, q.option3, q.option4],
+        correct: q.correct
+      }));
+      questions = questions.sort(() => Math.random() - 0.5).slice(0, 10);
+    }
 
     function init() {
       const userData = localStorage.getItem('iqtest_user');
@@ -231,7 +190,7 @@
       }
       currentUser = JSON.parse(userData);
       document.getElementById('userName').textContent = currentUser.name;
-      showQuestion();
+      loadQuestions().then(() => showQuestion());
     }
 
     function showQuestion() {

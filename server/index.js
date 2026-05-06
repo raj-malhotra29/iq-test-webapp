@@ -31,6 +31,56 @@ db.serialize(() => {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      option1 TEXT NOT NULL,
+      option2 TEXT NOT NULL,
+      option3 TEXT NOT NULL,
+      option4 TEXT NOT NULL,
+      correct INTEGER NOT NULL
+    )
+  `);
+
+  db.get(`SELECT COUNT(*) as count FROM questions`, [], (err, row) => {
+    if (!err && row && row.count === 0) {
+      const questions = [
+        ["What is the next number in the sequence: 2, 4, 8, 16, ?", "24", "32", "28", "30", 1],
+        ["If all roses are flowers and some flowers fade quickly, which statement is definitely true?", "Some roses fade quickly", "All roses fade quickly", "No roses fade quickly", "Cannot be determined", 3],
+        ["What is 15% of 200?", "25", "30", "35", "40", 1],
+        ["Complete the analogy: Book is to Reading as Fork is to...?", "Kitchen", "Eating", "Food", "Metal", 1],
+        ["If the day before yesterday was Monday, what day is tomorrow?", "Wednesday", "Thursday", "Friday", "Saturday", 1],
+        ["What comes next: A, C, E, G, ?", "H", "I", "J", "K", 1],
+        ["If you have 3 apples and you eat 1, then give 1 away, how many do you have?", "0", "1", "2", "3", 1],
+        ["Which word does not belong: Apple, Banana, Carrot, Grape?", "Apple", "Banana", "Carrot", "Grape", 2],
+        ["If RED is coded as 18-5-4, how is BLUE coded?", "2-12-21-5", "12-21-5-4", "2-12-21-4", "12-21-5-5", 1],
+        ["What is the square root of 144?", "10", "11", "12", "14", 2],
+        ["कौन सा जानवर रात को नहीं सोता?", "शेर", "बाघ", "छिपकली", "तोता", 1],
+        ["पानी कौन सा है?", "तरल", "ठोस", "गैस", "प्लाज़्मा", 0],
+        ["भारत की राजधानी क्या है?", "मुंबई", "दिल्ली", "कोलकाता", "चेन्नई", 1],
+        ["सूर्य कहाँ से उठता है?", "पश्चिम", "पूर्व", "उत्तर", "दक्षिण", 1],
+        ["आम का रंग कैसा होता है?", "हरा", "पीला", "लाल", "नारंगी", 1],
+        ["कौन सा फल बीज होता है?", "सेब", "केला", "अंगूर", "संतरा", 1],
+        ["पक्षी क्या है?", "उड़ने वाला जानवर", "रेंगने वाला", "तैरने वाला", "कूदने वाला", 0],
+        ["दिन में कितने घंटे होते हैं?", "24", "25", "23", "26", 0],
+        ["आलू किस प्रकार का सब्जी है?", "जड़", "पत्ता", "फूल", "बीज", 0],
+        ["सोने में कितने अक्षर हैं?", "3", "4", "5", "2", 1],
+        ["एक सप्ताह में कितने दिन होते हैं?", "6", "7", "8", "5", 1],
+        ["गाय क्या देती है?", "दूध", "अंडा", "मह", "ऊन", 0],
+        ["चंद्रमा कितने दिन में पूरा होता है?", "28 दिन", "30 दिन", "15 दिन", "7 दिन", 0],
+        ["कौन सा रंग ��समान में होता है?", "नीला", "लाल", "हरा", "पीला", 0],
+        ["बच्चा कहाँ से आता है?", "बस्ते से", "医院 से", "तोते से", "गाय से", 0],
+        ["क्या चीज़ तैरती है पर पानी में नहीं?", "लकड़ी", "पत्थर", "कंकड़ा", "बाल", 0],
+        ["दुनिया का सबसे बड़ा जानवर कौन है?", "हाथी", "व्हेल", "शेर", "गाय", 1],
+        ["सूर्य किस दिशा में होता है?", "पूर्व", "पश्चिम", "नीचे", "ऊपर", 0]
+      ];
+      questions.forEach(q => {
+        db.run('INSERT INTO questions (question, option1, option2, option3, option4, correct) VALUES (?, ?, ?, ?, ?, ?)', q);
+      });
+    }
+  });
 });
 
 const apiRouter = express.Router();
@@ -109,6 +159,30 @@ apiRouter.get('/leaderboard', (req, res) => {
       return res.status(500).json({ error: 'Failed to get leaderboard' });
     }
     res.json({ leaderboard });
+  });
+});
+
+apiRouter.delete('/users/:name/scores/:scoreId', (req, res) => {
+  const { name, scoreId } = req.params;
+  db.get('SELECT id FROM users WHERE name = ?', [name], (err, user) => {
+    if (err || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    db.run('DELETE FROM scores WHERE id = ? AND user_id = ?', [scoreId, user.id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to delete score' });
+      }
+      res.json({ success: true });
+    });
+  });
+});
+
+apiRouter.get('/questions', (req, res) => {
+  db.all('SELECT * FROM questions ORDER BY RANDOM()', (err, questions) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to get questions' });
+    }
+    res.json({ questions });
   });
 });
 
