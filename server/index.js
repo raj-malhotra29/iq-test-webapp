@@ -11,6 +11,9 @@ const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'database.db');
 
 let db;
 
+app.use(cors());
+app.use(express.json());
+
 async function initDb() {
   const SQL = await initSqlJs();
   
@@ -20,6 +23,10 @@ async function initDb() {
     db = new SQL.Database(data);
   } else {
     db = new SQL.Database();
+  }
+  
+  if (!fs.existsSync(path.join(__dirname, 'public'))) {
+    console.error('Public folder not found!');
   }
   
   db.run(`
@@ -206,11 +213,13 @@ apiRouter.get('/questions', (req, res) => {
 
 app.use('/api', apiRouter);
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 initDb().then(() => {
+  app.use(express.static(path.join(__dirname, 'public')));
+  
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
+  
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Database path: ${dbPath}`);
