@@ -44,3 +44,5 @@ Then open: http://localhost:3000
 - `DELETE /api/users/:name/scores/:id` - Delete score
 - `GET /api/leaderboard` - Get top 10 scores
 - `GET /api/questions` - Get random questions
+- ------------------------------------------------------
+LINK :- https://iq-test-webapp.onrender.com
