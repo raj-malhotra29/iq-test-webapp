@@ -1,79 +1,99 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'database.db');
-const db = new Database(dbPath);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+let db;
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS scores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    score INTEGER NOT NULL,
-    total_questions INTEGER NOT NULL,
-    completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )
-`);
+async function initDb() {
+  const SQL = await initSqlJs();
+  
+  let data = null;
+  if (fs.existsSync(dbPath)) {
+    data = fs.readFileSync(dbPath);
+    db = new SQL.Database(data);
+  } else {
+    db = new SQL.Database();
+  }
+  
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  db.run(`
+    CREATE TABLE IF NOT EXISTS scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      score INTEGER NOT NULL,
+      total_questions INTEGER NOT NULL,
+      completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  
+  db.run(`
+    CREATE TABLE IF NOT EXISTS questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      option1 TEXT NOT NULL,
+      option2 TEXT NOT NULL,
+      option3 TEXT NOT NULL,
+      option4 TEXT NOT NULL,
+      correct INTEGER NOT NULL
+    )
+  `);
+  
+  const existingQuestions = db.exec('SELECT COUNT(*) as count FROM questions');
+  if (!existingQuestions.length || existingQuestions[0].values[0][0] === 0) {
+    const questions = [
+      ["What is the next number: 2, 4, 8, 16, ?", "24", "32", "28", "30", 1],
+      ["If all roses are flowers, which is true?", "All roses are flowers", "No roses are flowers", "Cannot determine", "Some fade quickly", 0],
+      ["What is 15% of 200?", "25", "30", "35", "40", 1],
+      ["Book:Reading as Fork:?", "Kitchen", "Eating", "Food", "Metal", 1],
+      ["If day before yesterday was Monday, tomorrow is?", "Wednesday", "Thursday", "Friday", "Saturday", 1],
+      ["A, C, E, G, ?", "H", "I", "J", "K", 1],
+      ["3 apples - eat 1, give 1 = ?", "0", "1", "2", "3", 1],
+      ["Not fruit: Apple, Banana, Carrot, Grape?", "Apple", "Banana", "Carrot", "Grape", 2],
+      ["RED=18-5-4, BLUE=?", "2-12-21-5", "12-21-5-4", "2-12-21-4", "12-21-5-5", 1],
+      ["Square root of 144?", "10", "11", "12", "14", 2],
+      ["What animal sleeps at night?", "Lion", "Tiger", "Lizard", "Parrot", 2],
+      ["Water is?", "Liquid", "Solid", "Gas", "Plasma", 0],
+      ["India capital?", "Mumbai", "Delhi", "Kolkata", "Chennai", 1],
+      ["Where does sun rise?", "West", "East", "North", "South", 1],
+      ["Mango color?", "Green", "Yellow", "Red", "Orange", 1],
+      ["Has seed: Apple, Banana, Grape, Orange?", "Apple", "Banana", "Grape", "Orange", 1],
+      ["Bird?", "Flying animal", "Crawling", "Swimming", "Jumping", 0],
+      ["Hours in a day?", "24", "25", "23", "26", 0],
+      ["Potato is?", "Root", "Leaf", "Flower", "Seed", 0],
+      ["Letters in SON?", "3", "4", "5", "2", 1],
+      ["Days in week?", "6", "7", "8", "5", 1],
+      ["Cow gives?", "Milk", "Egg", "Honey", "Wool", 0],
+      ["Moon complete in?", "28 days", "30 days", "15 days", "7 days", 0],
+      ["Sky color?", "Blue", "Red", "Green", "Yellow", 0],
+      ["Biggest animal?", "Elephant", "Whale", "Lion", "Cow", 1],
+      ["Sun direction?", "East", "West", "Below", "Above", 0]
+    ];
+    questions.forEach(q => {
+      db.run('INSERT INTO questions (question, option1, option2, option3, option4, correct) VALUES (?, ?, ?, ?, ?, ?)', q);
+    });
+    saveDb();
+  }
+}
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS questions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    question TEXT NOT NULL,
-    option1 TEXT NOT NULL,
-    option2 TEXT NOT NULL,
-    option3 TEXT NOT NULL,
-    option4 TEXT NOT NULL,
-    correct INTEGER NOT NULL
-  )
-`);
-
-const existingQuestions = db.prepare('SELECT COUNT(*) as count FROM questions').get();
-if (!existingQuestions || existingQuestions.count === 0) {
-  const questions = [
-    ["What is the next number in the sequence: 2, 4, 8, 16, ?", "24", "32", "28", "30", 1],
-    ["If all roses are flowers and some flowers fade quickly, which statement is definitely true?", "Some roses fade quickly", "All roses fade quickly", "No roses fade quickly", "Cannot be determined", 3],
-    ["What is 15% of 200?", "25", "30", "35", "40", 1],
-    ["Complete the analogy: Book is to Reading as Fork is to...?", "Kitchen", "Eating", "Food", "Metal", 1],
-    ["If the day before yesterday was Monday, what day is tomorrow?", "Wednesday", "Thursday", "Friday", "Saturday", 1],
-    ["What comes next: A, C, E, G, ?", "H", "I", "J", "K", 1],
-    ["If you have 3 apples and you eat 1, then give 1 away, how many do you have?", "0", "1", "2", "3", 1],
-    ["Which word does not belong: Apple, Banana, Carrot, Grape?", "Apple", "Banana", "Carrot", "Grape", 2],
-    ["If RED is coded as 18-5-4, how is BLUE coded?", "2-12-21-5", "12-21-5-4", "2-12-21-4", "12-21-5-5", 1],
-    ["What is the square root of 144?", "10", "11", "12", "14", 2],
-    ["कौन सा जानवर रात को नहीं सोता?", "शेर", "बाघ", "छिपकली", "तोता", 1],
-    ["पानी कौन सा है?", "तरल", "ठोस", "गैस", "प्लाज़्मा", 0],
-    ["भारत की राजधानी क्या है?", "मुंबई", "दिल्ली", "कोलकाता", "चेन्नई", 1],
-    ["सूर्य कहाँ से उठता है?", "पश्चिम", "पूर्व", "उत्तर", "दक्षिण", 1],
-    ["आम का रंग कैसा होता है?", "हरा", "पीला", "लाल", "नारंगी", 1],
-    ["कौन सा फल बीज होता है?", "सेब", "केला", "अंगूर", "संतरा", 1],
-    ["पक्षी क्या है?", "उड़ने वाला जानवर", "रेंगने वाला", "तैरने वाला", "कूदने वाला", 0],
-    ["दिन में कितने घंटे होते हैं?", "24", "25", "23", "26", 0],
-    ["आलू किस प्रकार का सब्जी है?", "जड़", "पत्ता", "फूल", "बीज", 0],
-    ["सोने में कितने अक्षर हैं?", "3", "4", "5", "2", 1],
-    ["एक सप्ताह में कितने दिन होते हैं?", "6", "7", "8", "5", 1],
-    ["गाय क्या देती है?", "दूध", "अंडा", "मह", "ऊन", 0],
-    ["चंद्रमा कितने दिन में पूरा होता है?", "28 दिन", "30 दिन", "15 दिन", "7 दिन", 0],
-    ["कौन सा रंग आसमान में होता है?", "नीला", "लाल", "हरा", "पीला", 0],
-    ["बच्चा कहाँ से आता है?", "बस्ते से", "अस्पताल से", "तोते से", "गाय से", 0],
-    ["क्या चीज़ तैरती है पर पानी में नहीं?", "लकड़ी", "पत्थर", "कंकड़ा", "बाल", 0],
-    ["दुनिया का सबसे बड़ा जानवर कौन है?", "हाथी", "व्हेल", "शेर", "गाय", 1],
-    ["सूर्य किस दिशा में होता है?", "पूर्व", "पश्चिम", "नीचे", "ऊपर", 0]
-  ];
-  const insert = db.prepare('INSERT INTO questions (question, option1, option2, option3, option4, correct) VALUES (?, ?, ?, ?, ?, ?)');
-  questions.forEach(q => insert.run(...q));
+function saveDb() {
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
 }
 
 const apiRouter = express.Router();
@@ -85,9 +105,10 @@ apiRouter.post('/register', (req, res) => {
   }
 
   try {
-    db.prepare('INSERT OR IGNORE INTO users (name) VALUES (?)').run(name);
-    const user = db.prepare('SELECT * FROM users WHERE name = ?').get(name);
-    res.json({ user });
+    db.run('INSERT OR IGNORE INTO users (name) VALUES (?)', [name]);
+    const user = db.exec('SELECT * FROM users WHERE name = ?', [name]);
+    saveDb();
+    res.json({ user: user.length ? { id: user[0].values[0][0], name: name } : null });
   } catch (err) {
     res.status(500).json({ error: 'Failed to register user' });
   }
@@ -96,11 +117,11 @@ apiRouter.post('/register', (req, res) => {
 apiRouter.get('/users/:name', (req, res) => {
   const { name } = req.params;
   try {
-    const user = db.prepare('SELECT * FROM users WHERE name = ?').get(name);
-    if (!user) {
+    const user = db.exec('SELECT * FROM users WHERE name = ?', [name]);
+    if (!user.length || !user[0].values.length) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ user });
+    res.json({ user: { id: user[0].values[0][0], name: user[0].values[0][1] } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to get user' });
   }
@@ -113,8 +134,10 @@ apiRouter.post('/scores', (req, res) => {
   }
 
   try {
-    const info = db.prepare('INSERT INTO scores (user_id, score, total_questions) VALUES (?, ?, ?)').run(user_id, score, total_questions);
-    res.json({ success: true, id: info.lastInsertRowid });
+    db.run('INSERT INTO scores (user_id, score, total_questions) VALUES (?, ?, ?)', [user_id, score, total_questions]);
+    const lastId = db.exec('SELECT last_insert_rowid()');
+    saveDb();
+    res.json({ success: true, id: lastId[0].values[0][0] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save score' });
   }
@@ -123,12 +146,15 @@ apiRouter.post('/scores', (req, res) => {
 apiRouter.get('/users/:name/scores', (req, res) => {
   const { name } = req.params;
   try {
-    const user = db.prepare('SELECT id FROM users WHERE name = ?').get(name);
-    if (!user) {
+    const user = db.exec('SELECT id FROM users WHERE name = ?', [name]);
+    if (!user.length || !user[0].values.length) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const scores = db.prepare('SELECT * FROM scores WHERE user_id = ? ORDER BY completed_at DESC').all(user.id);
-    res.json({ scores });
+    const userId = user[0].values[0][0];
+    const scores = db.exec('SELECT * FROM scores WHERE user_id = ? ORDER BY completed_at DESC', [userId]);
+    res.json({ scores: scores.length ? scores[0].values.map(r => ({
+      id: r[0], user_id: r[1], score: r[2], total_questions: r[3], completed_at: r[4]
+    })) : [] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to get scores' });
   }
@@ -136,15 +162,17 @@ apiRouter.get('/users/:name/scores', (req, res) => {
 
 apiRouter.get('/leaderboard', (req, res) => {
   try {
-    const leaderboard = db.prepare(`
+    const leaderboard = db.exec(`
       SELECT users.name, MAX(scores.score) as best_score, scores.total_questions, scores.completed_at
       FROM scores
       JOIN users ON scores.user_id = users.id
       GROUP BY users.id
       ORDER BY best_score DESC
       LIMIT 10
-    `).all();
-    res.json({ leaderboard });
+    `);
+    res.json({ leaderboard: leaderboard.length ? leaderboard[0].values.map(r => ({
+      name: r[0], best_score: r[1], total_questions: r[2], completed_at: r[3]
+    })) : [] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to get leaderboard' });
   }
@@ -153,11 +181,12 @@ apiRouter.get('/leaderboard', (req, res) => {
 apiRouter.delete('/users/:name/scores/:scoreId', (req, res) => {
   const { name, scoreId } = req.params;
   try {
-    const user = db.prepare('SELECT id FROM users WHERE name = ?').get(name);
-    if (!user) {
+    const user = db.exec('SELECT id FROM users WHERE name = ?', [name]);
+    if (!user.length || !user[0].values.length) {
       return res.status(404).json({ error: 'User not found' });
     }
-    db.prepare('DELETE FROM scores WHERE id = ? AND user_id = ?').run(scoreId, user.id);
+    db.run('DELETE FROM scores WHERE id = ? AND user_id = ?', [scoreId, user[0].values[0][0]]);
+    saveDb();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete score' });
@@ -166,8 +195,10 @@ apiRouter.delete('/users/:name/scores/:scoreId', (req, res) => {
 
 apiRouter.get('/questions', (req, res) => {
   try {
-    const questions = db.prepare('SELECT * FROM questions ORDER BY RANDOM()').all();
-    res.json({ questions });
+    const questions = db.exec('SELECT * FROM questions ORDER BY RANDOM()');
+    res.json({ questions: questions.length ? questions[0].values.map(r => ({
+      id: r[0], question: r[1], option1: r[2], option2: r[3], option3: r[4], option4: r[5], correct: r[6]
+    })) : [] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to get questions' });
   }
@@ -179,9 +210,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Database path: ${dbPath}`);
+initDb().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Database path: ${dbPath}`);
+  });
+}).catch(err => {
+  console.error('Failed to init database:', err);
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (err) => {
