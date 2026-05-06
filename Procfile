@@ -1,1 +1,2 @@
+build: npm install
 web: node server/index.js
